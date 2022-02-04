@@ -1,5 +1,5 @@
 import express from 'express'
-import db from'../db.js'
+import db from '../db.js'
 const router = express.Router()
 
 
@@ -9,14 +9,14 @@ router.get('/', async (req, res, next) => {
   try {
     const [people] = await db.execute({
       sql: 'SELECT * FROM person LEFT OUTER JOIN zombie ON eatenBy = zombie.id',
-  
+
       // nestTables resolve conflitos de haver campos com mesmo nome nas tabelas
       // nas quais fizemos JOIN (neste caso, `person` e `zombie`).
       // descrição: https://github.com/felixge/node-mysql#joins-with-overlapping-column-names
       nestTables: true
     })
 
-    
+
     // Exercício 3: negociação de conteúdo para esta resposta
     //
     // renderiza a view de listagem de pessoas, passando como contexto
@@ -55,18 +55,18 @@ router.put('/eaten/', async (req, res, next) => {
     const [result] = await db.execute(`UPDATE person 
                                        SET alive=false, eatenBy=?
                                        WHERE id=?`,
-                                      [zombieId, personId])
+      [zombieId, personId])
     if (result.affectedRows !== 1) {
       req.flash('error', 'Não há pessoa para ser comida.')
     } else {
       req.flash('success', 'A pessoa foi inteiramente (não apenas cérebro) engolida.')
     }
-    
+
   } catch (error) {
     req.flash('error', `Erro desconhecido. Descrição: ${error}`)
 
   } finally {
-    res.redirect('/')
+    res.redirect('/people')
   }
 
 })
@@ -89,6 +89,31 @@ router.get('/new/', (req, res) => {
 //      - Em caso de sucesso do INSERT, colocar uma mensagem feliz
 //      - Em caso de erro do INSERT, colocar mensagem vermelhinha
 
+router.post('/', async (req, res) => {
+
+  const transaction = await db.getConnection()
+  const name = req.body;
+
+  try {
+    await transaction.beginTransaction()
+    const [insertResult] = await transaction.execute(
+      'INSERT INTO person (id,name,alive,eatenBy) VALUES (NULL, ?, 1, NULL)',
+      [name]);
+
+    if (insertResult) {
+      req.flash('success', 'Nova pessoa adicionada com sucesso')
+    } else {
+      req.flash('error', 'Erro ao inserir nova pessoa.')
+    }
+  } catch (error) {
+    console.error(error)
+    throw error;
+  } finally {
+    res.redirect('/')
+  }
+})
+
+
 
 /* DELETE uma pessoa */
 // Exercício 2: IMPLEMENTAR AQUI
@@ -97,6 +122,5 @@ router.get('/new/', (req, res) => {
 //   2. Redirecionar para a rota de listagem de pessoas
 //      - Em caso de sucesso do INSERT, colocar uma mensagem feliz
 //      - Em caso de erro do INSERT, colocar mensagem vermelhinha
-
 
 export default router
