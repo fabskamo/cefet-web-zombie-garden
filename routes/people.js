@@ -123,4 +123,26 @@ router.post('/', async (req, res) => {
 //      - Em caso de sucesso do INSERT, colocar uma mensagem feliz
 //      - Em caso de erro do INSERT, colocar mensagem vermelhinha
 
+router.delete('/:id', async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const [deleteResult] = await db.execute(
+      'DELETE FROM person WHERE id=?',
+      [id]
+    )
+
+    if (deleteResult) {
+      req.flash('success', 'Pessoa excluída com sucesso!')
+    } else {
+      req.flash('error', 'Erro ao deletar pessoa.')
+    }
+  } catch (error) {
+    console.error(error)
+    throw error;
+  } finally {
+    res.redirect('/')
+  }
+})
+
 export default router
